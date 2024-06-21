@@ -34,8 +34,8 @@ def catch_all(path):
 # Function to clean and preprocess input data for prediction
 def clean_input(input_data):
     try:
-        # Convert input JSON data to a numpy array of float32 and normalize
-        input_array = np.array(json.loads(input_data), dtype=np.float32).reshape(1, 28, 28, 1) / 255.0
+        # Ensure input data is a 2D array of size 28x28
+        input_array = np.array(input_data, dtype=np.float32).reshape(1, 28, 28, 1) / 255.0
         return input_array
     except (ValueError, TypeError) as e:
         raise ValueError("Invalid input data")
@@ -77,5 +77,3 @@ def health_check():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
-if __name__ == '__main__':
-    app.run()
