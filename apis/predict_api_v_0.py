@@ -11,8 +11,8 @@ from flask_limiter.util import get_remote_address
 # Initialize Flask application
 app = Flask(__name__)
 
-# Enable CORS (Cross-Origin Resource Sharing) for the '/predict' endpoint
-CORS(app, resources={r"/predict": {"origins": "https://dipalo-tsa-motheo.github.io"}})
+# Enable CORS (Cross-Origin Resource Sharing)
+CORS(app, resources={r"/*": {"origins": "https://dipalo-tsa-motheo.github.io"}})
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
