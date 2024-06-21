@@ -7,15 +7,20 @@ from utils.digit_recognizer import init_model, prepare_image
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import logging
 
 # Initialize Flask application
 app = Flask(__name__)
 
-# Enable CORS (Cross-Origin Resource Sharing)
+# Enable CORS (Cross-Origin Resource Sharing) for all routes
 CORS(app, resources={r"/*": {"origins": "https://dipalo-tsa-motheo.github.io"}})
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
+
+# Set up logging configuration
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load the pre-trained CNN model for handwritten digit recognition
 model = init_model('handwritten_digits_reader.h5')
@@ -49,7 +54,7 @@ def predict_options():
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
 def predict():
     try:
-        input_data = request.form.get('input')
+        input_data = request.json.get('input')
         if not input_data:
             return jsonify({'error': 'No input data provided'}), 400
         
@@ -58,10 +63,11 @@ def predict():
         digit = np.argmax(prediction)
 
         response = jsonify({'digit': int(digit)})
-        response.headers.add("Access-Control-Allow-Origin", "https://dipalo-tsa-motheo.github.io")  # or specific domain
+        response.headers.add("Access-Control-Allow-Origin", "https://dipalo-tsa-motheo.github.io")
         return response
 
     except Exception as e:
+        logger.error(f"Error during prediction: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Health check endpoint to verify the status of the API
