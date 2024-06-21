@@ -13,7 +13,7 @@ from flask_limiter.util import get_remote_address
 app = Flask(__name__)
 
 # Enable CORS (Cross-Origin Resource Sharing) for the '/predict' endpoint
-CORS(app, resources={r"/predict": {"origins": "https://dipalo-tsa-motheo.github.io/"}})
+CORS(app, resources={r"/predict": {"origins": "https://dipalo-tsa-motheo.github.io"}})
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
@@ -52,8 +52,9 @@ def predict():
         input_array = clean_input(input_data)
         prediction = model.predict(input_array)
         digit = np.argmax(prediction)
+
         response = jsonify({'digit': int(digit)})
-        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Origin", "*")  # or specific domain
         return response
 
     except Exception as e:
