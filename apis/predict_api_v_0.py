@@ -11,23 +11,28 @@ import logging
 import time
 import cProfile
 
-# Measure and log model loading time
-start_time = time.time()
-model = init_model('handwritten_digits_reader.h5')
-end_time = time.time()
-logger.info(f"Model loaded in {end_time - start_time} seconds.")
-
 # Initialize Flask application
 app = Flask(__name__)
 
 # Enable CORS (Cross-Origin Resource Sharing) for the specified origins
 CORS(app, resources={r"/predict": {"origins": ["https://dipalo-tsa-motheo.github.io", "https://dipalo-tsa-motheo.github.io/"]}})
+
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Measure and log model loading time
+start_time = time.time()
+try:
+    model = init_model('handwritten_digits_reader.h5')
+    end_time = time.time()
+    logger.info(f"Model loaded in {end_time - start_time} seconds.")
+except Exception as e:
+    logger.error(f"Error loading model: {e}")
+    raise e
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
@@ -50,7 +55,11 @@ def profile_prediction(input_array):
     profiler.enable()
     
     start_time = time.time()
-    prediction = model.predict(input_array)
+    try:
+        prediction = model.predict(input_array)
+    except Exception as e:
+        logger.error(f"Error during model prediction: {e}")
+        raise e
     end_time = time.time()
     
     profiler.disable()
