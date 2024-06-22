@@ -23,8 +23,11 @@ limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "5
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load the pre-trained CNN model for handwritten digit recognition
+# Measure and log model loading time
+start_time = time.time()
 model = init_model('handwritten_digits_reader.h5')
+end_time = time.time()
+logger.info(f"Model loaded in {end_time - start_time} seconds.")
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
