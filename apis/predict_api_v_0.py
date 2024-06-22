@@ -17,13 +17,12 @@ logger = logging.getLogger(__name__)
 def start_model():
     # Measure and log model loading time
     # Load the pre-trained CNN model for handwritten digit recognition
-
     start_time = time.time()
     model = init_model('handwritten_digits_reader.h5')
     end_time = time.time()
     logger.info(f"Model loaded in {end_time - start_time} seconds.")
-    return lambda: model
-get_model =  start_model()
+    return model
+
 # Initialize Flask application
 app = Flask(__name__)
 
@@ -61,7 +60,7 @@ def predict():
         input_array = clean_input(input_data)
         
         logger.info("Data preprocessed successfully, starting prediction...")
-        model = get_model()
+        model = start_model()
         prediction = model.predict(input_array)
         logger.info("Prediction completed.")
         
