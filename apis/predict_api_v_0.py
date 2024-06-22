@@ -17,8 +17,8 @@ def start_model():
     model = init_model('handwritten_digits_reader.h5')
     end_time = time.time()
     logger.info(f"Model loaded in {end_time - start_time} seconds.")
-    return model
-get_model = lambda: start_model()
+    return lambda: model
+get_model =  start_model()
 # Initialize Flask application
 app = Flask(__name__)
 
