@@ -11,6 +11,12 @@ import logging
 import time
 import cProfile
 
+# Measure and log model loading time
+start_time = time.time()
+model = init_model('handwritten_digits_reader.h5')
+end_time = time.time()
+logger.info(f"Model loaded in {end_time - start_time} seconds.")
+
 # Initialize Flask application
 app = Flask(__name__)
 
@@ -22,14 +28,6 @@ limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "5
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Measure and log model loading time
-def start_model():
-    start_time = time.time()
-    model = init_model('handwritten_digits_reader.h5')
-    end_time = time.time()
-    logger.info(f"Model loaded in {end_time - start_time} seconds.")
-    return model
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
@@ -48,7 +46,6 @@ def clean_input(input_data):
 
 # Profile prediction function
 def profile_prediction(input_array):
-    model = start_model()
     profiler = cProfile.Profile()
     profiler.enable()
     
@@ -67,7 +64,6 @@ def profile_prediction(input_array):
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
 def predict():
     try:
-        
         input_data = request.form.get('input')
         if not input_data:
             return jsonify({'error': 'No input data provided'}), 400
