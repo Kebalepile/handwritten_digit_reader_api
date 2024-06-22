@@ -2,10 +2,9 @@ import os
 import json
 import time
 import numpy as np
-from PIL import Image
 from flask import Flask, request, jsonify, redirect
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
+from utils.digit_recognizer import init_model
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -15,38 +14,14 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def init_model(model_name):
-    try:
-        path = "./models/" + model_name  # Adjust path as necessary
-        model = load_model(path)
-        return model
-    except Exception as e:
-        print(f"Error loading the model: {e}")
-        exit(1)
-
-def prepare_image(image, target_size):
-   
-    if image.mode != 'L':
-        image = image.convert('L')
-    image = image.resize(target_size)
-    image = img_to_array(image)
-    image = np.expand_dims(image, axis=0)
-    image = image / 255.0
-    
-    return image
-
-# Placeholder for the model
-model = None
-
-def load_model_before_fork():
-    global model
-    try:
-        logger.info("Loading model before forking...")
-        model = init_model('handwritten_digits_reader.h5')
-        logger.info("Model loaded successfully before forking.")
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-
+def start_model():
+    # Measure and log model loading time
+    # Load the pre-trained CNN model for handwritten digit recognition
+    start_time = time.time()
+    model = init_model('handwritten_digits_reader.h5')
+    end_time = time.time()
+    logger.info(f"Model loaded in {end_time - start_time} seconds.")
+    return model
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -77,19 +52,15 @@ def clean_input(input_data):
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
 def predict():
     try:
-        if model is None:
-            logger.error("Model is still loading, cannot process request.")
-            return jsonify({'error': 'Model is still loading, please try again later'}), 503
-
         input_data = request.form.get('input')
         if not input_data:
-            logger.error("No input data provided.")
             return jsonify({'error': 'No input data provided'}), 400
         
         logger.info(f"Received input data: {input_data}")
         input_array = clean_input(input_data)
         
         logger.info("Data preprocessed successfully, starting prediction...")
+        model = start_model()
         prediction = model.predict(input_array)
         logger.info("Prediction completed.")
         
@@ -102,15 +73,10 @@ def predict():
         logger.error(f"Error during prediction: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 # Health check endpoint to verify the status of the API
 @app.route('/health', methods=['GET'])
 def health_check():
-    status = 'ok' if model is not None else 'loading'
-    response = jsonify({'status': status})
+    response = jsonify({'status': 'ok'})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
-    
-load_model_before_fork()
-if __name__ == '__main__':
-    
-    app.run(host='0.0.0.0', port=10000)
