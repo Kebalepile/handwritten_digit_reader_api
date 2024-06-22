@@ -31,8 +31,10 @@ def load_model_before_fork():
         logger.info("Loading model before forking...")
         model = init_model('handwritten_digits_reader.h5')
         logger.info("Model loaded successfully before forking.")
-        return def get_model():
-                   return model
+        def get_model():
+            return model
+        return get_model
+        
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
 get_model = load_model_before_fork()
