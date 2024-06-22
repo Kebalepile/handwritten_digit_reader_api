@@ -24,21 +24,6 @@ CORS(app, resources={r"/predict": {"origins": ["https://dipalo-tsa-motheo.github
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
 
-# Placeholder for the model
-def load_model_before_fork():
-    global model
-    try:
-        logger.info("Loading model before forking...")
-        model = init_model('handwritten_digits_reader.h5')
-        logger.info("Model loaded successfully before forking.")
-        def get_model():
-            return model
-        return get_model
-        
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-get_model = load_model_before_fork()
-
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -70,7 +55,9 @@ def predict():
         input_array = clean_input(input_data)
         
         logger.info("Data preprocessed successfully, starting prediction...")
-        model = get_model()
+        
+        model = init_model('handwritten_digits_reader.h5')   
+       
         prediction = model.predict(input_array)
         logger.info("Prediction completed.")
         
