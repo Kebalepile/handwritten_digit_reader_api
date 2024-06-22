@@ -13,10 +13,7 @@ import logging
 app = Flask(__name__)
 
 # Enable CORS (Cross-Origin Resource Sharing) for the '/predict' endpoint
-# Development CORS
-CORS(app, resources={r"/predict": {"origins": "http://localhost:5173"}})
-# Production CORS
-CORS(app, resources={r"/predict": {"origins": "https://dipalo-tsa-motheo.github.io"}})
+CORS(app, resources={r"/predict": {"origins": ["https://dipalo-tsa-motheo.github.io", "https://dipalo-tsa-motheo.github.io/"]}})
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
@@ -52,15 +49,14 @@ def predict():
         if not input_data:
             return jsonify({'error': 'No input data provided'}), 400
         
+        logger.info(f"Received input data: {input_data}")
         input_array = clean_input(input_data)
         prediction = model.predict(input_array)
         digit = np.argmax(prediction)
         response = jsonify({'digit': int(digit)})
 
-        # Development cors headers
-        # response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
-        # Production cors headers
         response.headers.add("Access-Control-Allow-Origin", "https://dipalo-tsa-motheo.github.io")
+        response.headers.add("Access-Control-Allow-Origin", "https://dipalo-tsa-motheo.github.io/")
         return response
 
     except Exception as e:
