@@ -3,12 +3,13 @@ import json
 import numpy as np
 from flask import Flask, request, jsonify, redirect
 from tensorflow.keras.models import load_model
-from utils.digit_recognizer import init_model, prepare_image
+from utils.digit_recognizer import init_model  # Adjust this import as needed
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import logging
 import time
+import cProfile
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -44,6 +45,21 @@ def clean_input(input_data):
     except (ValueError, TypeError) as e:
         raise ValueError("Invalid input data")
 
+# Profile prediction function
+def profile_prediction(input_array):
+    profiler = cProfile.Profile()
+    profiler.enable()
+    
+    start_time = time.time()
+    prediction = model.predict(input_array)
+    end_time = time.time()
+    
+    profiler.disable()
+    profiler.print_stats(sort='cumtime')
+    
+    logger.info(f"Prediction completed in {end_time - start_time} seconds.")
+    return prediction
+
 # Endpoint for predicting handwritten digits
 @app.route('/predict', methods=['POST'])
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
@@ -54,13 +70,14 @@ def predict():
             return jsonify({'error': 'No input data provided'}), 400
         
         logger.info(f"Received input data: {input_data}")
+        
+        start_time = time.time()
         input_array = clean_input(input_data)
+        end_time = time.time()
+        logger.info(f"Input preprocessing time: {end_time - start_time} seconds.")
         
         logger.info("Data preprocessed successfully, starting prediction...")
-        start_time = time.time()
-        prediction = model.predict(input_array)
-        end_time = time.time()
-        logger.info(f"Prediction completed in {end_time - start_time} seconds.")
+        prediction = profile_prediction(input_array)
         
         digit = np.argmax(prediction)
         response = jsonify({'digit': int(digit)})
