@@ -51,17 +51,20 @@ def predict():
         
         logger.info(f"Received input data: {input_data}")
         input_array = clean_input(input_data)
+        
+        logger.info("Data preprocessed successfully, starting prediction...")
         prediction = model.predict(input_array)
+        logger.info("Prediction completed.")
+        
         digit = np.argmax(prediction)
         response = jsonify({'digit': int(digit)})
 
-        response.headers.add("Access-Control-Allow-Origin", "https://dipalo-tsa-motheo.github.io")
-        response.headers.add("Access-Control-Allow-Origin", "https://dipalo-tsa-motheo.github.io/")
         return response
 
     except Exception as e:
         logger.error(f"Error during prediction: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 # Health check endpoint to verify the status of the API
 @app.route('/health', methods=['GET'])
