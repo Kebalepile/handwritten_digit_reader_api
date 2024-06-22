@@ -4,11 +4,15 @@ import time
 import numpy as np
 from flask import Flask, request, jsonify, redirect
 from tensorflow.keras.models import load_model
-from utils.digit_recognizer import init_model, prepare_image
+from utils.digit_recognizer import init_model
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import logging
+
+# Set up logging configuration
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def start_model():
     # Measure and log model loading time
@@ -28,10 +32,6 @@ CORS(app, resources={r"/predict": {"origins": ["https://dipalo-tsa-motheo.github
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
-
-# Set up logging configuration
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
