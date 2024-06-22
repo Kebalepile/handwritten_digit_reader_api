@@ -33,7 +33,7 @@ CORS(app, resources={r"/predict": {"origins": [os.getenv('ALLOWED_ORIGIN')]}})
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 redis_client = Redis(host=os.getenv('REDIS_HOST', 'localhost'), port=os.getenv('REDIS_PORT', 6379))
-limiter = Limiter(get_remote_address, app=app, storage_uri="redis://localhost:6379", default_limits=["200 per day", "50 per hour"])
+limiter = Limiter(get_remote_address, app=app, storage_uri=f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}", default_limits=["200 per day", "50 per hour"])
 
 # Set up logging configuration
 logging.basicConfig(level=logging.INFO)
