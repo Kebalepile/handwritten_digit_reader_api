@@ -18,7 +18,7 @@ def start_model():
     end_time = time.time()
     logger.info(f"Model loaded in {end_time - start_time} seconds.")
     return model
-model = start_model()
+get_model = lambda: start_model()
 # Initialize Flask application
 app = Flask(__name__)
 
@@ -60,6 +60,7 @@ def predict():
         input_array = clean_input(input_data)
         
         logger.info("Data preprocessed successfully, starting prediction...")
+        model = get_model()
         prediction = model.predict(input_array)
         logger.info("Prediction completed.")
         
