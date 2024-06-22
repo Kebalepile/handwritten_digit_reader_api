@@ -48,6 +48,7 @@ def clean_input(input_data):
 
 # Profile prediction function
 def profile_prediction(input_array):
+    model = start_model()
     profiler = cProfile.Profile()
     profiler.enable()
     
@@ -66,7 +67,7 @@ def profile_prediction(input_array):
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
 def predict():
     try:
-        model = start_model()
+        
         input_data = request.form.get('input')
         if not input_data:
             return jsonify({'error': 'No input data provided'}), 400
