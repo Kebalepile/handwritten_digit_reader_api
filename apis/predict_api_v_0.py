@@ -8,12 +8,13 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import logging
+import time
 
 # Initialize Flask application
 app = Flask(__name__)
 
-# Enable CORS (Cross-Origin Resource Sharing) for the '/predict' endpoint
-CORS(app, resources={r"/predict": {"origins": ["https://dipalo-tsa-motheo.github.io", "https://dipalo-tsa-motheo.github.io/"]}})
+# Enable CORS (Cross-Origin Resource Sharing) for the specified origins
+CORS(app, resources={r"/*": {"origins": ["https://dipalo-tsa-motheo.github.io"]}})
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
@@ -53,8 +54,10 @@ def predict():
         input_array = clean_input(input_data)
         
         logger.info("Data preprocessed successfully, starting prediction...")
+        start_time = time.time()
         prediction = model.predict(input_array)
-        logger.info("Prediction completed.")
+        end_time = time.time()
+        logger.info(f"Prediction completed in {end_time - start_time} seconds.")
         
         digit = np.argmax(prediction)
         response = jsonify({'digit': int(digit)})
@@ -65,10 +68,12 @@ def predict():
         logger.error(f"Error during prediction: {e}")
         return jsonify({'error': str(e)}), 500
 
-
 # Health check endpoint to verify the status of the API
 @app.route('/health', methods=['GET'])
 def health_check():
     response = jsonify({'status': 'ok'})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
+
+if __name__ == '__main__':
+    app.run(debug=True)
