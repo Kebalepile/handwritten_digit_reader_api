@@ -31,10 +31,11 @@ def load_model_before_fork():
         logger.info("Loading model before forking...")
         model = init_model('handwritten_digits_reader.h5')
         logger.info("Model loaded successfully before forking.")
-        return model
+        return def get_model():
+                   return model
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
-model = load_model_before_fork()
+get_model = load_model_before_fork()
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
@@ -57,11 +58,7 @@ def clean_input(input_data):
 def predict():
     global model
     try:
-        if model is None:
-            logger.error("Model is still loading, cannot process request.")
-            model = load_model_before_fork()
-            return jsonify({'error': 'Model is still loading, please try again later'}), 503
-
+        
         input_data = request.form.get('input')
         if not input_data:
             logger.error("No input data provided.")
@@ -71,6 +68,7 @@ def predict():
         input_array = clean_input(input_data)
         
         logger.info("Data preprocessed successfully, starting prediction...")
+        model = get_model()
         prediction = model.predict(input_array)
         logger.info("Prediction completed.")
         
