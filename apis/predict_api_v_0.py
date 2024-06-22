@@ -24,10 +24,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Measure and log model loading time
-start_time = time.time()
-model = init_model('handwritten_digits_reader.h5')
-end_time = time.time()
-logger.info(f"Model loaded in {end_time - start_time} seconds.")
+def start_model():
+    start_time = time.time()
+    model = init_model('handwritten_digits_reader.h5')
+    end_time = time.time()
+    logger.info(f"Model loaded in {end_time - start_time} seconds.")
+    return model
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
@@ -64,6 +66,7 @@ def profile_prediction(input_array):
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
 def predict():
     try:
+        model = start_model()
         input_data = request.form.get('input')
         if not input_data:
             return jsonify({'error': 'No input data provided'}), 400
@@ -93,6 +96,3 @@ def health_check():
     response = jsonify({'status': 'ok'})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
-
-if __name__ == '__main__':
-    app.run(debug=True)
