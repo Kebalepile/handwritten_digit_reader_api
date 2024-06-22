@@ -7,32 +7,37 @@ from utils.digit_recognizer import init_model  # Adjust this import as needed
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from redis import Redis
 import logging
 import time
-import cProfile
 
-# Initialize Flask application
-app = Flask(__name__)
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
-# Enable CORS (Cross-Origin Resource Sharing) for the specified origins
-CORS(app, resources={r"/predict": {"origins": ["https://dipalo-tsa-motheo.github.io", "https://dipalo-tsa-motheo.github.io/"]}})
-
-# Rate limiting configuration: 200 requests per day, 50 requests per hour
-limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
-
-# Set up logging configuration
+# Initialize logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Measure and log model loading time
 start_time = time.time()
-try:
-    model = init_model('handwritten_digits_reader.h5')
-    end_time = time.time()
-    logger.info(f"Model loaded in {end_time - start_time} seconds.")
-except Exception as e:
-    logger.error(f"Error loading model: {e}")
-    raise e
+model = init_model('handwritten_digits_reader.h5')
+end_time = time.time()
+logger.info(f"Model loaded in {end_time - start_time} seconds.")
+
+# Initialize Flask application
+app = Flask(__name__)
+
+# Enable CORS (Cross-Origin Resource Sharing) for the specified origins
+CORS(app, resources={r"/predict": {"origins": [os.getenv('ALLOWED_ORIGIN')]}})
+
+# Rate limiting configuration: 200 requests per day, 50 requests per hour
+redis_client = Redis(host=os.getenv('REDIS_HOST', 'localhost'), port=os.getenv('REDIS_PORT', 6379))
+limiter = Limiter(get_remote_address, app=app, storage_uri="redis://localhost:6379", default_limits=["200 per day", "50 per hour"])
+
+# Set up logging configuration
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
@@ -49,25 +54,6 @@ def clean_input(input_data):
     except (ValueError, TypeError) as e:
         raise ValueError("Invalid input data")
 
-# Profile prediction function
-def profile_prediction(input_array):
-    profiler = cProfile.Profile()
-    profiler.enable()
-    
-    start_time = time.time()
-    try:
-        prediction = model.predict(input_array)
-    except Exception as e:
-        logger.error(f"Error during model prediction: {e}")
-        raise e
-    end_time = time.time()
-    
-    profiler.disable()
-    profiler.print_stats(sort='cumtime')
-    
-    logger.info(f"Prediction completed in {end_time - start_time} seconds.")
-    return prediction
-
 # Endpoint for predicting handwritten digits
 @app.route('/predict', methods=['POST'])
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
@@ -77,7 +63,7 @@ def predict():
         if not input_data:
             return jsonify({'error': 'No input data provided'}), 400
         
-        logger.info(f"Received input data: {input_data}")
+        logger.info(f"Received input data.")
         
         start_time = time.time()
         input_array = clean_input(input_data)
@@ -85,7 +71,7 @@ def predict():
         logger.info(f"Input preprocessing time: {end_time - start_time} seconds.")
         
         logger.info("Data preprocessed successfully, starting prediction...")
-        prediction = profile_prediction(input_array)
+        prediction = model.predict(input_array)
         
         digit = np.argmax(prediction)
         response = jsonify({'digit': int(digit)})
@@ -102,3 +88,6 @@ def health_check():
     response = jsonify({'status': 'ok'})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False)
