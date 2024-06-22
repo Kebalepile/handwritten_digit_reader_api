@@ -1,11 +1,11 @@
 import os
 import json
 import time
-import threading
 import numpy as np
+from PIL import Image
 from flask import Flask, request, jsonify, redirect
 from tensorflow.keras.models import load_model
-from utils.digit_recognizer import init_model
+from tensorflow.keras.preprocessing.image import img_to_array
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -15,6 +15,39 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def init_model(model_name):
+    try:
+        path = "./models/" + model_name  # Adjust path as necessary
+        model = load_model(path)
+        return model
+    except Exception as e:
+        print(f"Error loading the model: {e}")
+        exit(1)
+
+def prepare_image(image, target_size):
+   
+    if image.mode != 'L':
+        image = image.convert('L')
+    image = image.resize(target_size)
+    image = img_to_array(image)
+    image = np.expand_dims(image, axis=0)
+    image = image / 255.0
+    
+    return image
+
+# Placeholder for the model
+model = None
+
+def load_model_before_fork():
+    global model
+    try:
+        logger.info("Loading model before forking...")
+        model = init_model('handwritten_digits_reader.h5')
+        logger.info("Model loaded successfully before forking.")
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}")
+
+
 # Initialize Flask application
 app = Flask(__name__)
 
@@ -23,20 +56,6 @@ CORS(app, resources={r"/predict": {"origins": ["https://dipalo-tsa-motheo.github
 
 # Rate limiting configuration: 200 requests per day, 50 requests per hour
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
-
-# Placeholder for the model
-model = None
-model_ready = threading.Event()
-
-def load_model_thread():
-    global model
-    logger.info("Loading model...")
-    model = init_model('handwritten_digits_reader.h5')
-    logger.info("Model loaded.")
-    model_ready.set()
-
-# Start loading the model in a separate thread
-threading.Thread(target=load_model_thread).start()
 
 # Redirect all paths to '/predict' endpoint
 @app.route('/', defaults={'path': ''})
@@ -58,11 +77,13 @@ def clean_input(input_data):
 @limiter.limit("50 per hour")  # Apply rate limiting to this endpoint
 def predict():
     try:
-        if not model_ready.is_set():
+        if model is None:
+            logger.error("Model is still loading, cannot process request.")
             return jsonify({'error': 'Model is still loading, please try again later'}), 503
 
         input_data = request.form.get('input')
         if not input_data:
+            logger.error("No input data provided.")
             return jsonify({'error': 'No input data provided'}), 400
         
         logger.info(f"Received input data: {input_data}")
@@ -84,7 +105,11 @@ def predict():
 # Health check endpoint to verify the status of the API
 @app.route('/health', methods=['GET'])
 def health_check():
-    status = 'ok' if model_ready.is_set() else 'loading'
+    status = 'ok' if model is not None else 'loading'
     response = jsonify({'status': status})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
+
+if __name__ == '__main__':
+    load_model_before_fork()
+    app.run(host='0.0.0.0', port=10000)
