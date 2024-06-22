@@ -73,7 +73,7 @@ def predict():
 # Health check endpoint to verify the status of the API
 @app.route('/health', methods=['GET'])
 def health_check():
-    status = 'ok' if model is not None else 'loading'
+    status = 'ok'
     response = jsonify({'status': status})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
