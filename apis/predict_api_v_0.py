@@ -58,6 +58,7 @@ def predict():
     try:
         if model is None:
             logger.error("Model is still loading, cannot process request.")
+            load_model_before_fork()
             return jsonify({'error': 'Model is still loading, please try again later'}), 503
 
         input_data = request.form.get('input')
